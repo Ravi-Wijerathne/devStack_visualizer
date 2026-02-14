@@ -6,6 +6,13 @@
 
 ## Change Log
 
+### 2026-02-14
+
+- **Created automation Python scripts** (`scripts/` directory)
+  - `scripts/check_env.py` — Prerequisites checker & environment setup script. Validates Python ≥ 3.8, Rust/Cargo, C compiler (tree-sitter build dep), and Graphviz. Offers to install missing tools or provides download links. Builds release binary and adds `target/release` to user PATH.
+  - `scripts/run.py` — Launcher script. Quick sanity check, auto-builds if sources changed, and launches devstack with user-provided arguments. Supports smart argument parsing (auto-prepends `analyze` subcommand).
+  - **Affected files:** `scripts/check_env.py`, `scripts/run.py`, `MEMORY.md`
+
 ### 2026-02-13
 
 - **Added agent memory system**
