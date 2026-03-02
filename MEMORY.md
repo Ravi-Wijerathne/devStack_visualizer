@@ -6,6 +6,36 @@
 
 ## Change Log
 
+### 2026-03-02 (Session 3)
+
+- **Fixed Tauri app launch issues**
+  - Added `beforeDevCommand` and `beforeBuildCommand` to `tauri.conf.json` so Tauri auto-starts the Vite dev server.
+  - Fixed `plugins.dialog` config — removed invalid map `{ "open": true, "save": true }` (dialog plugin expects unit/empty config, not a map). This was causing a runtime panic: `PluginInitialization("dialog", "invalid type: map, expected unit")`.
+  - Removed `plugins.shell` config similarly (replaced `plugins` with empty `{}`).
+  - **Build verified:** TypeScript compiles cleanly (`tsc --noEmit`), Rust compiles with 3 minor warnings (unused code), app launches successfully with `npx tauri dev`.
+  - **Affected files:** `src-tauri/tauri.conf.json`, `MEMORY.md`
+
+### 2026-03-02 (Session 2)
+
+- **Implemented Tauri v2 GUI — Full scaffolding, migration, and frontend**
+  - **Phase 1 — Tauri Scaffolding:** Created `src-tauri/` directory with `Cargo.toml`, `build.rs`, `tauri.conf.json`, `capabilities/default.json`, and placeholder icon.
+  - **Phase 1b — IPC Bridge:** Created `commands.rs` with 6 Tauri commands: `analyze_project`, `get_file_details`, `export_graph`, `detect_stack`, `get_complexity`, `detect_layers`. All registered in `lib.rs`.
+  - **Rust Migration:** Moved all Rust modules (`scanner.rs`, `language_detector.rs`, `parser/`, `analyzer.rs`, `graph/`, `output.rs`) from `src/` to `src-tauri/src/`. Removed `cli.rs` (replaced by GUI). Added `GraphData`, `GraphNode`, `GraphEdge` structs to `analyzer.rs` for frontend consumption.
+  - **Frontend Setup:** Created `package.json`, `tsconfig.json`, `vite.config.ts`, `tailwind.config.js`, `postcss.config.js`, `index.html`.
+  - **Frontend Components:** Created all 6 React components:
+    - `ProjectPicker.tsx` — Welcome screen with folder picker button
+    - `Toolbar.tsx` — Top bar with Open, Refresh, Export, Settings buttons + project stats
+    - `GraphView.tsx` — Interactive dependency graph using `@xyflow/react` (React Flow) with zoom, pan, clickable nodes, color-coded by language/complexity
+    - `Sidebar.tsx` — File details panel (imports, functions, structs) + project overview
+    - `SettingsPanel.tsx` — Modal with language filter, layout direction, theme options
+    - `ExportDialog.tsx` — Modal for PNG/SVG/PDF export
+  - **Hooks & Types:** Created `useTauriCommands.ts` hook (wraps all 6 IPC calls with loading/error state), `types/index.ts` (TypeScript interfaces matching Rust structs).
+  - **Root Cargo.toml:** Converted to workspace config pointing to `src-tauri/`.
+  - **Old CLI files removed** from `src/` (replaced by React/TS frontend).
+  - **`.gitignore` updated** — added `/dist/`, `/src-tauri/target/`.
+  - **Build verified:** Frontend builds (`vite build` → `dist/`), Rust backend compiles (`cargo check` passes).
+  - **Affected files:** All `src-tauri/src/*.rs`, `src-tauri/Cargo.toml`, `src-tauri/tauri.conf.json`, `src-tauri/build.rs`, `src-tauri/capabilities/default.json`, `src/*.tsx`, `src/hooks/*.ts`, `src/types/*.ts`, `src/styles/*.css`, `package.json`, `tsconfig.json`, `vite.config.ts`, `tailwind.config.js`, `postcss.config.js`, `index.html`, `Cargo.toml`, `.gitignore`, `PROJECT_SPEC.md`, `MEMORY.md`
+
 ### 2026-03-02
 
 - **Upgraded project from CLI-only to Tauri v2 Desktop GUI**
