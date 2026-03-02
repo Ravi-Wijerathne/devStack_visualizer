@@ -1,3 +1,5 @@
+pub mod js_parser;
+pub mod python_parser;
 pub mod rust_parser;
 
 use anyhow::Result;

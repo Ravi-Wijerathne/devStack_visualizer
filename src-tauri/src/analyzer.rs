@@ -195,12 +195,46 @@ fn resolve_import(import: &str, node_map: &HashMap<String, NodeIndex>) -> Option
         import.replace("::", "/")
     };
 
-    let candidates = vec![
-        format!("src/{}.rs", module_name),
-        format!("src/{}/mod.rs", module_name),
-        format!("{}.rs", module_name),
-        format!("{}/mod.rs", module_name),
+    // Convert Python dotted imports to path (e.g. "app.models" -> "app/models")
+    let module_path = module_name.replace('.', "/");
+
+    // Build candidates for all supported languages
+    let mut candidates = vec![
+        // Rust
+        format!("src/{}.rs", module_path),
+        format!("src/{}/mod.rs", module_path),
+        format!("{}.rs", module_path),
+        format!("{}/mod.rs", module_path),
+        // Python
+        format!("{}.py", module_path),
+        format!("{}/__init__.py", module_path),
+        format!("src/{}.py", module_path),
+        // JS/TS
+        format!("{}.js", module_path),
+        format!("{}.ts", module_path),
+        format!("{}.jsx", module_path),
+        format!("{}.tsx", module_path),
+        format!("{}/index.js", module_path),
+        format!("{}/index.ts", module_path),
+        format!("{}/index.tsx", module_path),
+        format!("src/{}.js", module_path),
+        format!("src/{}.ts", module_path),
+        format!("src/{}.tsx", module_path),
     ];
+
+    // For relative JS/TS imports (starting with ./), strip the prefix
+    if let Some(stripped) = module_path.strip_prefix("./") {
+        candidates.push(format!("{}.js", stripped));
+        candidates.push(format!("{}.ts", stripped));
+        candidates.push(format!("{}.jsx", stripped));
+        candidates.push(format!("{}.tsx", stripped));
+        candidates.push(format!("{}/index.js", stripped));
+        candidates.push(format!("{}/index.ts", stripped));
+        candidates.push(format!("{}/index.tsx", stripped));
+        candidates.push(format!("src/{}.js", stripped));
+        candidates.push(format!("src/{}.ts", stripped));
+        candidates.push(format!("src/{}.tsx", stripped));
+    }
 
     for candidate in &candidates {
         if node_map.contains_key(candidate) {
@@ -208,14 +242,26 @@ fn resolve_import(import: &str, node_map: &HashMap<String, NodeIndex>) -> Option
         }
     }
 
+    // Fuzzy match: compare the last path segment(s)
     for key in node_map.keys() {
         let key_stem = key
             .trim_end_matches(".rs")
+            .trim_end_matches(".py")
+            .trim_end_matches(".js")
+            .trim_end_matches(".ts")
+            .trim_end_matches(".jsx")
+            .trim_end_matches(".tsx")
             .trim_end_matches("/mod")
+            .trim_end_matches("/index")
+            .trim_end_matches("/__init__")
             .rsplit('/')
             .next()
             .unwrap_or(key);
-        if module_name.ends_with(key_stem) && !key_stem.is_empty() {
+        let import_stem = module_path
+            .rsplit('/')
+            .next()
+            .unwrap_or(&module_path);
+        if !key_stem.is_empty() && !import_stem.is_empty() && key_stem == import_stem {
             return Some(key.clone());
         }
     }

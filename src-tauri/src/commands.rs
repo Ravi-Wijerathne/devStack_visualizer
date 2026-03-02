@@ -1,6 +1,8 @@
 use crate::analyzer::{DependencyGraph, GraphData};
 use crate::graph;
 use crate::language_detector::{self, ProjectStack};
+use crate::parser::js_parser::JsParser;
+use crate::parser::python_parser::PythonParser;
 use crate::parser::rust_parser::RustParser;
 use crate::parser::{FileAnalysis, LanguageParser};
 use crate::scanner;
@@ -60,16 +62,33 @@ pub fn analyze_project(path: String) -> Result<AnalysisResult, String> {
     // Detect stack
     let stack = language_detector::detect_stack(&project_files, &project_root);
 
-    // Parse source files (Rust only for now, parallel)
+    // Parse source files (all languages, parallel)
     let rust_parser = RustParser::new();
-    let analyses: Vec<FileAnalysis> = project_files
+    let python_parser = PythonParser::new();
+    let js_parser = JsParser::new();
+
+    let rust_analyses: Vec<FileAnalysis> = project_files
         .rust_files
         .par_iter()
-        .filter_map(|file| match rust_parser.parse(file) {
-            Ok(analysis) => Some(analysis),
-            Err(_) => None,
-        })
+        .filter_map(|file| rust_parser.parse(file).ok())
         .collect();
+
+    let python_analyses: Vec<FileAnalysis> = project_files
+        .python_files
+        .par_iter()
+        .filter_map(|file| python_parser.parse(file).ok())
+        .collect();
+
+    let js_analyses: Vec<FileAnalysis> = project_files
+        .js_files
+        .par_iter()
+        .filter_map(|file| js_parser.parse(file).ok())
+        .collect();
+
+    let mut analyses = Vec::new();
+    analyses.extend(rust_analyses);
+    analyses.extend(python_analyses);
+    analyses.extend(js_analyses);
 
     // Build dependency graph
     let dep_graph = DependencyGraph::build(&analyses, &project_root)
@@ -109,6 +128,18 @@ pub fn get_file_details(path: String) -> Result<FileAnalysis, String> {
                 .parse(file_path)
                 .map_err(|e| format!("Parse error: {}", e))
         }
+        "py" => {
+            let parser = PythonParser::new();
+            parser
+                .parse(file_path)
+                .map_err(|e| format!("Parse error: {}", e))
+        }
+        "js" | "ts" | "jsx" | "tsx" => {
+            let parser = JsParser::new();
+            parser
+                .parse(file_path)
+                .map_err(|e| format!("Parse error: {}", e))
+        }
         _ => Err(format!("Unsupported file type: .{}", ext)),
     }
 }
@@ -125,11 +156,25 @@ pub fn export_graph(path: String, format: String, output_path: String) -> Result
         scanner::scan_project(&project_root).map_err(|e| format!("Scan error: {}", e))?;
 
     let rust_parser = RustParser::new();
-    let analyses: Vec<FileAnalysis> = project_files
-        .rust_files
-        .par_iter()
-        .filter_map(|file| rust_parser.parse(file).ok())
-        .collect();
+    let python_parser = PythonParser::new();
+    let js_parser = JsParser::new();
+
+    let mut analyses = Vec::new();
+    analyses.extend(
+        project_files.rust_files.par_iter()
+            .filter_map(|file| rust_parser.parse(file).ok())
+            .collect::<Vec<_>>()
+    );
+    analyses.extend(
+        project_files.python_files.par_iter()
+            .filter_map(|file| python_parser.parse(file).ok())
+            .collect::<Vec<_>>()
+    );
+    analyses.extend(
+        project_files.js_files.par_iter()
+            .filter_map(|file| js_parser.parse(file).ok())
+            .collect::<Vec<_>>()
+    );
 
     let dep_graph = DependencyGraph::build(&analyses, &project_root)
         .map_err(|e| format!("Graph build error: {}", e))?;
@@ -193,11 +238,25 @@ pub fn get_complexity(path: String) -> Result<Vec<ComplexityReport>, String> {
         scanner::scan_project(&project_root).map_err(|e| format!("Scan error: {}", e))?;
 
     let rust_parser = RustParser::new();
-    let analyses: Vec<FileAnalysis> = project_files
-        .rust_files
-        .par_iter()
-        .filter_map(|file| rust_parser.parse(file).ok())
-        .collect();
+    let python_parser = PythonParser::new();
+    let js_parser = JsParser::new();
+
+    let mut analyses = Vec::new();
+    analyses.extend(
+        project_files.rust_files.par_iter()
+            .filter_map(|file| rust_parser.parse(file).ok())
+            .collect::<Vec<_>>()
+    );
+    analyses.extend(
+        project_files.python_files.par_iter()
+            .filter_map(|file| python_parser.parse(file).ok())
+            .collect::<Vec<_>>()
+    );
+    analyses.extend(
+        project_files.js_files.par_iter()
+            .filter_map(|file| js_parser.parse(file).ok())
+            .collect::<Vec<_>>()
+    );
 
     Ok(analyses
         .iter()
@@ -226,11 +285,25 @@ pub fn detect_layers(path: String) -> Result<LayerInfo, String> {
         scanner::scan_project(&project_root).map_err(|e| format!("Scan error: {}", e))?;
 
     let rust_parser = RustParser::new();
-    let analyses: Vec<FileAnalysis> = project_files
-        .rust_files
-        .par_iter()
-        .filter_map(|file| rust_parser.parse(file).ok())
-        .collect();
+    let python_parser = PythonParser::new();
+    let js_parser = JsParser::new();
+
+    let mut analyses = Vec::new();
+    analyses.extend(
+        project_files.rust_files.par_iter()
+            .filter_map(|file| rust_parser.parse(file).ok())
+            .collect::<Vec<_>>()
+    );
+    analyses.extend(
+        project_files.python_files.par_iter()
+            .filter_map(|file| python_parser.parse(file).ok())
+            .collect::<Vec<_>>()
+    );
+    analyses.extend(
+        project_files.js_files.par_iter()
+            .filter_map(|file| js_parser.parse(file).ok())
+            .collect::<Vec<_>>()
+    );
 
     let dep_graph = DependencyGraph::build(&analyses, &project_root)
         .map_err(|e| format!("Graph build error: {}", e))?;

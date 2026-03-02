@@ -6,6 +6,18 @@
 
 ## Change Log
 
+### 2026-03-02 (Session 4)
+
+- **Added Python and JS/TS parsers — Fixed zero-results bug**
+  - **Root cause:** `analyze_project` only parsed Rust files (`project_files.rust_files`). When opening a Python+React project, there were no `.rs` files, so all stats were 0.
+  - **Created `python_parser.rs`:** Regex-based parser extracting `import`/`from` imports, `def` functions, and `class` declarations from Python files.
+  - **Created `js_parser.rs`:** Regex-based parser extracting ES6 imports, `require()` calls, `function`/`const => ` function declarations, `class`/`interface`/`type` definitions from JS/TS files.
+  - **Updated `parser/mod.rs`:** Added `pub mod python_parser;` and `pub mod js_parser;`.
+  - **Updated `commands.rs`:** All 4 commands (`analyze_project`, `export_graph`, `get_complexity`, `detect_layers`) now parse Rust + Python + JS/TS files. `get_file_details` now handles `.py`, `.js`, `.ts`, `.jsx`, `.tsx` extensions.
+  - **Updated `analyzer.rs` `resolve_import`:** Added candidates for Python (`.py`, `__init__.py`), JS/TS (`.js`, `.ts`, `.jsx`, `.tsx`, `index.js/ts/tsx`), and relative imports (`./`). Fuzzy matching now strips all language extensions.
+  - **Build verified:** Compiles cleanly (3 pre-existing warnings, no errors).
+  - **Affected files:** `src-tauri/src/parser/python_parser.rs` (new), `src-tauri/src/parser/js_parser.rs` (new), `src-tauri/src/parser/mod.rs`, `src-tauri/src/commands.rs`, `src-tauri/src/analyzer.rs`, `MEMORY.md`
+
 ### 2026-03-02 (Session 3)
 
 - **Fixed Tauri app launch issues**
