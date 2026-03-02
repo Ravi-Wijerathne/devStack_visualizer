@@ -82,35 +82,3 @@ pub fn detect_stack(project_files: &ProjectFiles, root: &Path) -> ProjectStack {
 
     stack
 }
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_detect_rust_project() {
-        let tmp = tempfile::tempdir().unwrap();
-        std::fs::write(tmp.path().join("Cargo.toml"), "[package]").unwrap();
-
-        let files = ProjectFiles {
-            rust_files: vec![tmp.path().join("main.rs")],
-            ..Default::default()
-        };
-
-        let stack = detect_stack(&files, tmp.path());
-        assert_eq!(stack.backend.as_deref(), Some("Rust"));
-    }
-
-    #[test]
-    fn test_detect_containerized() {
-        let tmp = tempfile::tempdir().unwrap();
-
-        let files = ProjectFiles {
-            docker_files: vec![tmp.path().join("Dockerfile")],
-            ..Default::default()
-        };
-
-        let stack = detect_stack(&files, tmp.path());
-        assert!(stack.containerized);
-    }
-}

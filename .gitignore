@@ -105,6 +105,16 @@ cobertura.xml
 *.orig
 .cache/
 
+# ========================
+# Frontend Build Output
+# ========================
+/dist/
+/node_modules/
+
+# ========================
+# Tauri
+# ========================
+/src-tauri/target/
 
 # Added by cargo
 

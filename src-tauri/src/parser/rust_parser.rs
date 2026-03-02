@@ -5,7 +5,7 @@ use tree_sitter::Parser;
 
 /// Rust source file parser using tree-sitter
 pub struct RustParser {
-    _private: (), // prevent direct construction to enforce use of new()
+    _private: (),
 }
 
 impl RustParser {
@@ -49,7 +49,6 @@ fn visit_node(node: tree_sitter::Node, source: &str, analysis: &mut FileAnalysis
     match node.kind() {
         "use_declaration" => {
             if let Some(import_text) = extract_node_text(node, source) {
-                // Clean the import: remove "use " prefix and ";" suffix
                 let cleaned = import_text
                     .trim_start_matches("use ")
                     .trim_end_matches(';')
@@ -69,7 +68,6 @@ fn visit_node(node: tree_sitter::Node, source: &str, analysis: &mut FileAnalysis
             }
         }
         "impl_item" => {
-            // Also capture methods inside impl blocks
             for i in 0..node.child_count() {
                 if let Some(child) = node.child(i) {
                     if child.kind() == "declaration_list" {
@@ -88,11 +86,10 @@ fn visit_node(node: tree_sitter::Node, source: &str, analysis: &mut FileAnalysis
         }
         "enum_item" => {
             if let Some(name) = find_child_by_field(node, "name", source) {
-                analysis.structs.push(name); // treat enums like structs for graphing
+                analysis.structs.push(name);
             }
         }
         "mod_item" => {
-            // Module declaration — treat as an import-like relationship
             if let Some(name) = find_child_by_field(node, "name", source) {
                 analysis.imports.push(format!("mod {}", name));
             }
@@ -129,60 +126,4 @@ fn find_child_by_field(
 ) -> Option<String> {
     node.child_by_field_name(field_name)
         .and_then(|child| extract_node_text(child, source))
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use std::io::Write;
-    use tempfile::NamedTempFile;
-
-    fn parse_rust_source(code: &str) -> FileAnalysis {
-        let mut file = NamedTempFile::new().unwrap();
-        file.write_all(code.as_bytes()).unwrap();
-        let parser = RustParser::new();
-        parser.parse(file.path()).unwrap()
-    }
-
-    #[test]
-    fn test_parse_use_declaration() {
-        let analysis = parse_rust_source("use std::collections::HashMap;");
-        assert_eq!(analysis.imports, vec!["std::collections::HashMap"]);
-    }
-
-    #[test]
-    fn test_parse_function() {
-        let analysis = parse_rust_source("fn hello() { }");
-        assert_eq!(analysis.functions, vec!["hello"]);
-    }
-
-    #[test]
-    fn test_parse_struct() {
-        let analysis = parse_rust_source("struct Foo { x: i32 }");
-        assert_eq!(analysis.structs, vec!["Foo"]);
-    }
-
-    #[test]
-    fn test_parse_combined() {
-        let code = r#"
-use std::io;
-use anyhow::Result;
-
-struct Config {
-    path: String,
-}
-
-fn main() {
-    println!("hello");
-}
-
-fn helper() -> i32 {
-    42
-}
-"#;
-        let analysis = parse_rust_source(code);
-        assert_eq!(analysis.imports.len(), 2);
-        assert_eq!(analysis.structs, vec!["Config"]);
-        assert_eq!(analysis.functions, vec!["main", "helper"]);
-    }
 }

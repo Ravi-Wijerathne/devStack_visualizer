@@ -632,18 +632,18 @@ tests/sample_projects/
 
 | Phase                                    | Status      |
 |------------------------------------------|-------------|
-| Phase 1 — Tauri App Scaffolding          | ⬜ Not Started |
-| Phase 1b — Tauri Commands / IPC Bridge   | ⬜ Not Started |
-| Phase 2 — File System Scanner            | ✅ Complete (needs migration to src-tauri/) |
-| Phase 3 — Language Detection             | ✅ Complete (needs migration to src-tauri/) |
-| Phase 4 — AST Parsing                   | ✅ Complete — Rust parser (needs migration to src-tauri/) |
-| Phase 5 — Dependency Analyzer            | ✅ Complete (needs migration to src-tauri/) |
-| Phase 6 — DOT Graph Generation           | ✅ Complete (needs migration to src-tauri/) |
-| Phase 7 — Graphviz Export                | ✅ Complete (needs migration to src-tauri/) |
-| Phase 8 — Frontend: Interactive Graph    | ⬜ Not Started |
-| Phase 9 — Frontend: Project Picker & Toolbar | ⬜ Not Started |
-| Phase 10 — Frontend: File Detail Sidebar | ⬜ Not Started |
-| Phase 11 — Frontend: Settings & Export   | ⬜ Not Started |
+| Phase 1 — Tauri App Scaffolding          | ✅ Complete |
+| Phase 1b — Tauri Commands / IPC Bridge   | ✅ Complete |
+| Phase 2 — File System Scanner            | ✅ Complete (migrated to src-tauri/) |
+| Phase 3 — Language Detection             | ✅ Complete (migrated to src-tauri/) |
+| Phase 4 — AST Parsing                   | ✅ Complete — Rust parser (migrated to src-tauri/) |
+| Phase 5 — Dependency Analyzer            | ✅ Complete (migrated to src-tauri/) |
+| Phase 6 — DOT Graph Generation           | ✅ Complete (migrated to src-tauri/) |
+| Phase 7 — Graphviz Export                | ✅ Complete (migrated to src-tauri/) |
+| Phase 8 — Frontend: Interactive Graph    | ✅ Complete |
+| Phase 9 — Frontend: Project Picker & Toolbar | ✅ Complete |
+| Phase 10 — Frontend: File Detail Sidebar | ✅ Complete |
+| Phase 11 — Frontend: Settings & Export   | ✅ Complete |
 | Phase 12 — Real-Time File Watcher        | ⬜ Not Started |
 | Circular Dependency Detection            | ✅ Complete |
 | Code Complexity Scoring                  | ✅ Complete |
