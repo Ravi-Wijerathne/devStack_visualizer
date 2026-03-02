@@ -1,4 +1,4 @@
-import { useCallback, useMemo } from "react";
+import { useCallback, useEffect, useMemo } from "react";
 import {
   ReactFlow,
   Controls,
@@ -89,8 +89,17 @@ export default function GraphView({ graphData, onNodeClick }: GraphViewProps) {
     return { initialNodes: nodes, initialEdges: edges };
   }, [graphData]);
 
-  const [nodes, , onNodesChange] = useNodesState(initialNodes);
-  const [edges, , onEdgesChange] = useEdgesState(initialEdges);
+  const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
+  const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
+
+  // Sync state when graphData changes (useNodesState/useEdgesState only use initial value once)
+  useEffect(() => {
+    setNodes(initialNodes);
+  }, [initialNodes, setNodes]);
+
+  useEffect(() => {
+    setEdges(initialEdges);
+  }, [initialEdges, setEdges]);
 
   const handleNodeClick: NodeMouseHandler = useCallback(
     (_, node) => {

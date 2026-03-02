@@ -94,6 +94,20 @@ impl DependencyGraph {
     pub fn to_graph_data(&self, analyses: &[FileAnalysis]) -> GraphData {
         let cycles = self.detect_cycles();
 
+        // Collect all filenames to detect duplicates — use parent/file for disambiguation
+        let all_labels: Vec<String> = self
+            .graph
+            .node_indices()
+            .map(|idx| {
+                let path = &self.graph[idx];
+                path.rsplit('/').next().unwrap_or(path).to_string()
+            })
+            .collect();
+        let mut filename_counts: HashMap<String, usize> = HashMap::new();
+        for name in &all_labels {
+            *filename_counts.entry(name.clone()).or_insert(0) += 1;
+        }
+
         let nodes: Vec<GraphNode> = self
             .graph
             .node_indices()
@@ -118,9 +132,23 @@ impl DependencyGraph {
                     "other"
                 };
 
+                // Use parent/filename when filename is ambiguous
+                let filename = label.rsplit('/').next().unwrap_or(label).to_string();
+                let display_label = if filename_counts.get(&filename).copied().unwrap_or(0) > 1 {
+                    // Show last two path segments (e.g. "parser/mod.rs")
+                    let parts: Vec<&str> = label.rsplitn(3, '/').collect();
+                    if parts.len() >= 2 {
+                        format!("{}/{}", parts[1], parts[0])
+                    } else {
+                        filename
+                    }
+                } else {
+                    filename
+                };
+
                 GraphNode {
                     id: label.clone(),
-                    label: label.rsplit('/').next().unwrap_or(label).to_string(),
+                    label: display_label,
                     file_path: label.clone(),
                     node_type: node_type.to_string(),
                     complexity: analysis

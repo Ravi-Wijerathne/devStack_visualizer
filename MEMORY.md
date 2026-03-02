@@ -6,6 +6,18 @@
 
 ## Change Log
 
+### 2026-03-02 (Session 5)
+
+- **Fixed GraphView not rendering nodes — stale React state bug**
+  - **Root cause:** `useNodesState(initialNodes)` and `useEdgesState(initialEdges)` only use their argument on the **first render** (like `useState`). When `graphData` arrived asynchronously after analysis, the `useMemo` recalculated new nodes/edges but the state hooks never picked up the updated values — resulting in empty/scattered nodes.
+  - **Fix:** Added `useEffect` hooks that call `setNodes(initialNodes)` and `setEdges(initialEdges)` whenever the memoized values change, keeping React Flow state in sync with incoming graph data. Also imported `useEffect` from React.
+  - **Affected files:** `src/components/GraphView.tsx`, `MEMORY.md`
+
+- **Fixed ambiguous node labels (multiple "mod.rs" nodes indistinguishable)**
+  - **Root cause:** `to_graph_data()` in `analyzer.rs` used only the filename (`label.rsplit('/').next()`) as the display label. Projects with multiple `mod.rs` files in different directories all showed "mod.rs".
+  - **Fix:** Pre-count filename occurrences; when a filename appears more than once, display `parent/filename` (e.g. `parser/mod.rs`, `graph/mod.rs`) instead of just the filename.
+  - **Affected files:** `src-tauri/src/analyzer.rs`, `MEMORY.md`
+
 ### 2026-03-02 (Session 4)
 
 - **Added Python and JS/TS parsers — Fixed zero-results bug**
