@@ -1,6 +1,6 @@
 # Copilot Instructions — DevStack Visualizer
 
-You are working on **DevStack Visualizer**, a Rust CLI tool that analyzes project codebases and generates architecture diagrams.
+You are working on **DevStack Visualizer**, a Rust + Tauri desktop GUI application that analyzes project codebases and generates interactive architecture diagrams.
 
 ## Key Reference
 
@@ -8,43 +8,82 @@ Always read and follow the full project specification in `PROJECT_SPEC.md` at th
 
 ## Project Summary
 
-- **Language:** Rust
-- **Purpose:** CLI tool that scans a project directory, parses source files using Tree-Sitter, builds a dependency graph, and renders architecture diagrams via Graphviz.
-- **Key Crates:** `clap` (CLI), `walkdir` (scanner), `tree-sitter` (AST parsing), `petgraph` (graph), `anyhow` (errors), `serde`/`serde_json` (serialization), `rayon` (parallelism).
+- **Language:** Rust (backend / core logic) + TypeScript/React (frontend UI)
+- **Framework:** Tauri v2 (Rust backend + system webview frontend)
+- **Purpose:** Desktop GUI application that scans a project directory, parses source files using Tree-Sitter, builds a dependency graph, and renders interactive architecture diagrams in-app. Previously a CLI-only tool, now upgraded to a full GUI experience.
+- **Key Crates (Rust/Backend):** `tauri` (desktop app framework), `walkdir` (scanner), `tree-sitter` (AST parsing), `petgraph` (graph), `anyhow` (errors), `serde`/`serde_json` (serialization), `rayon` (parallelism).
+- **Key Packages (Frontend):** `react`, `typescript`, `d3` or `react-flow` (interactive graph rendering), `@tauri-apps/api` (Rust ↔ JS bridge).
 
 ## Project Structure
 
 ```
-src/
-├── main.rs                  # Entry point
-├── cli.rs                   # CLI argument parsing (clap v4 derive)
-├── scanner.rs               # File system scanner (walkdir)
-├── language_detector.rs     # Smart language/stack detection
-├── parser/
-│   ├── mod.rs               # LanguageParser trait + module exports
-│   ├── rust_parser.rs       # Rust AST parser
-│   ├── python_parser.rs     # Python AST parser
-│   └── js_parser.rs         # JS/TS AST parser
-├── analyzer.rs              # Dependency analyzer (petgraph)
-├── graph/
-│   ├── mod.rs               # Graph module exports
-│   ├── dot_generator.rs     # DOT format generator
-│   └── renderer.rs          # Graphviz renderer (PNG/SVG/PDF)
-└── output.rs                # Output formatting
+src-tauri/
+├── src/
+│   ├── main.rs                  # Tauri entry point
+│   ├── commands.rs              # Tauri command handlers (IPC bridge)
+│   ├── scanner.rs               # File system scanner (walkdir)
+│   ├── language_detector.rs     # Smart language/stack detection
+│   ├── parser/
+│   │   ├── mod.rs               # LanguageParser trait + module exports
+│   │   ├── rust_parser.rs       # Rust AST parser
+│   │   ├── python_parser.rs     # Python AST parser
+│   │   └── js_parser.rs         # JS/TS AST parser
+│   ├── analyzer.rs              # Dependency analyzer (petgraph)
+│   ├── graph/
+│   │   ├── mod.rs               # Graph module exports
+│   │   ├── dot_generator.rs     # DOT format generator
+│   │   └── renderer.rs          # Graphviz renderer (PNG/SVG/PDF export)
+│   └── output.rs                # Output formatting / serialization
+├── Cargo.toml                   # Rust dependencies
+└── tauri.conf.json              # Tauri app configuration
+
+src/                             # Frontend (React + TypeScript)
+├── App.tsx                      # Main application component
+├── main.tsx                     # React entry point
+├── components/
+│   ├── GraphView.tsx            # Interactive dependency graph (zoomable, pannable)
+│   ├── Sidebar.tsx              # File detail sidebar (imports, structs, functions)
+│   ├── Toolbar.tsx              # Actions: open project, export, settings
+│   ├── ProjectPicker.tsx        # Folder picker dialog
+│   ├── SettingsPanel.tsx        # Preferences & configuration
+│   └── ExportDialog.tsx         # Export graph as PNG/SVG/PDF
+├── hooks/
+│   └── useTauriCommands.ts      # React hooks for Tauri IPC calls
+├── styles/
+│   └── ...                      # CSS / Tailwind styles
+└── types/
+    └── index.ts                 # Shared TypeScript types
+
+package.json
+tsconfig.json
+vite.config.ts                   # Vite bundler config for frontend
 ```
 
 ## Coding Guidelines
 
+### General
+
 1. **Always refer to `PROJECT_SPEC.md`** for detailed specs, structs, traits, and phase descriptions before implementing or modifying any module.
-2. **Use `anyhow::Result`** for error handling throughout.
+2. **Use `anyhow::Result`** for error handling in all Rust code.
 3. **Parser extensibility:** All language parsers must implement the `LanguageParser` trait.
-4. **Skip directories:** `target/`, `node_modules/`, `.git/`, `__pycache__/`.
+4. **Skip directories:** `target/`, `node_modules/`, `.git/`, `__pycache__/`, `dist/`.
 5. **Parallel parsing** with `rayon` where applicable.
 6. **Update the Status Tracker** table in `PROJECT_SPEC.md` when completing a phase.
 7. When adding a new language parser, follow the existing pattern in `rust_parser.rs`.
 8. Use `petgraph::Graph<String, ()>` for the dependency graph (nodes = files/modules, edges = imports).
 9. DOT output must be valid Graphviz syntax.
-10. Support output formats: PNG, SVG, PDF via `std::process::Command` calling `dot`.
+10. Support export formats: PNG, SVG, PDF.
+
+### Tauri / GUI Specific
+
+11. **Tauri commands** are the IPC bridge between frontend and backend. Define them in `commands.rs` using `#[tauri::command]` and register in `main.rs`.
+12. All data passed between Rust and the frontend must be **serializable** (`serde::Serialize` / `serde::Deserialize`).
+13. Use `@tauri-apps/api` on the frontend to invoke Rust commands — never call Rust directly.
+14. **Frontend state management:** Keep analysis results in React state; the Rust backend is stateless per-request.
+15. **File dialogs:** Use Tauri's native dialog API (`tauri::api::dialog`) for the project folder picker.
+16. **Real-time analysis:** Use Tauri events or file watcher (`notify` crate) to push updates when project files change.
+17. **Graph rendering:** Render the dependency graph interactively in the browser (d3.js / react-flow), not via Graphviz. Graphviz/DOT is only used for export.
+18. Keep the frontend responsive — run heavy analysis work in Rust (backend) and stream results via Tauri commands/events.
 
 ## Current Implementation Status
 
