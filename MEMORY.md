@@ -6,6 +6,12 @@
 
 ## Change Log
 
+### 2026-03-03 (Session 6)
+
+- **Updated README.md to reflect Tauri GUI app**
+  - Replaced outdated CLI-focused README with current project info: Tauri v2 desktop app, features list, prerequisites (added Node.js), setup/dev/build commands (`npm install`, `npx tauri dev/build`), GUI usage workflow, and tech stack table.
+  - **Affected files:** `README.md`, `MEMORY.md`
+
 ### 2026-03-02 (Session 5)
 
 - **Fixed GraphView not rendering nodes — stale React state bug**
