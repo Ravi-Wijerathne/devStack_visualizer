@@ -6,6 +6,13 @@
 
 ## Change Log
 
+### 2026-03-04 (Session 7)
+
+- **Updated Python scripts for Tauri GUI (CLI → GUI migration)**
+  - **`scripts/check_env.py`:** Added Node.js/npm prerequisite check (>= 18.0), added `check_node_modules()` and `check_tauri_cli()` checks, updated `check_cargo_project()` to verify `src-tauri/Cargo.toml`, `package.json`, and `tauri.conf.json`. Replaced CLI binary build (`cargo build --release`) with Tauri app build (`npx tauri build`). Removed PATH setup (no longer a CLI tool). Added `install_npm_deps()` helper. Updated main flow to reflect GUI app workflow.
+  - **`scripts/run.py`:** Complete rewrite from CLI launcher to Tauri GUI launcher. Now supports `dev` (default) and `build` commands. Checks Node.js, npm, and Cargo prerequisites. Auto-installs npm dependencies if missing. Launches `npx tauri dev` for development mode or `npx tauri build` for production. Removed all CLI argument handling, binary path resolution, and `analyze` subcommand logic.
+  - **Affected files:** `scripts/check_env.py`, `scripts/run.py`, `MEMORY.md`
+
 ### 2026-03-03 (Session 6)
 
 - **Updated README.md to reflect Tauri GUI app**

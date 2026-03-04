@@ -2,23 +2,23 @@
 """
 DevStack Visualizer — Launcher Script
 =======================================
-Quickly builds (if needed) and launches the devstack CLI tool.
+Quickly launches the Tauri v2 Desktop GUI application in development
+or production mode. Installs npm dependencies if needed.
 
 Usage:
-    python scripts/run.py <path-to-project> [OPTIONS]
+    python scripts/run.py              # Launch in development mode (default)
+    python scripts/run.py dev          # Launch in development mode
+    python scripts/run.py build        # Build production app
+    python scripts/run.py --help       # Show help
 
 Examples:
-    python scripts/run.py .                         # Analyse current project
-    python scripts/run.py ../my-app --output svg    # SVG output
-    python scripts/run.py . --graph --verbose       # Verbose graph mode
-    python scripts/run.py . --help                  # Show devstack help
-
-If the release binary doesn't exist yet, it builds it automatically.
+    python scripts/run.py              # Start Tauri dev server + hot reload
+    python scripts/run.py dev          # Same as above
+    python scripts/run.py build        # Build production installer/bundle
 """
 
 from __future__ import annotations
 
-import os
 import platform
 import subprocess
 import sys
@@ -51,40 +51,74 @@ def warn(msg: str) -> None:
 
 # ── Paths ───────────────────────────────────────────────────────────
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
-CARGO_TOML = PROJECT_ROOT / "Cargo.toml"
+PACKAGE_JSON = PROJECT_ROOT / "package.json"
+TAURI_CONF = PROJECT_ROOT / "src-tauri" / "tauri.conf.json"
+NODE_MODULES = PROJECT_ROOT / "node_modules"
 IS_WINDOWS = platform.system() == "Windows"
-EXE_NAME = "devstack.exe" if IS_WINDOWS else "devstack"
-RELEASE_BIN = PROJECT_ROOT / "target" / "release" / EXE_NAME
-DEBUG_BIN = PROJECT_ROOT / "target" / "debug" / EXE_NAME
 
 
-# ── Quick prerequisite sanity check ─────────────────────────────────
+# ── Prerequisite checks ────────────────────────────────────────────
 
-def quick_check() -> bool:
-    """Fast sanity check — just verify cargo and dot are reachable."""
+def check_prerequisites() -> bool:
+    """Fast sanity check — verify Node.js, npm, and Cargo are reachable."""
     errors: list[str] = []
+
+    # Node.js
+    try:
+        result = subprocess.run(
+            ["node", "--version"],
+            capture_output=True,
+            text=True,
+            timeout=10,
+        )
+        if result.returncode == 0:
+            ok(f"Node.js {result.stdout.strip()}")
+        else:
+            errors.append("Node.js check failed.")
+    except FileNotFoundError:
+        errors.append("Node.js is not installed or not on PATH.")
+    except Exception as e:
+        errors.append(f"Error checking Node.js: {e}")
+
+    # npm
+    try:
+        result = subprocess.run(
+            ["npm", "--version"],
+            capture_output=True,
+            text=True,
+            timeout=10,
+        )
+        if result.returncode == 0:
+            ok(f"npm {result.stdout.strip()}")
+        else:
+            errors.append("npm check failed.")
+    except FileNotFoundError:
+        errors.append("npm is not installed or not on PATH.")
+    except Exception as e:
+        errors.append(f"Error checking npm: {e}")
 
     # Cargo
     try:
-        subprocess.run(
+        result = subprocess.run(
             ["cargo", "--version"],
             capture_output=True,
+            text=True,
             timeout=10,
         )
+        if result.returncode == 0:
+            ok(f"Cargo {result.stdout.strip()}")
+        else:
+            errors.append("Cargo check failed.")
     except FileNotFoundError:
         errors.append("Rust/Cargo is not installed or not on PATH.")
     except Exception as e:
         errors.append(f"Error checking Cargo: {e}")
 
-    # Graphviz (optional but warn)
+    # Graphviz (optional — warn only)
     try:
-        subprocess.run(
-            ["dot", "-V"],
-            capture_output=True,
-            timeout=10,
-        )
+        subprocess.run(["dot", "-V"], capture_output=True, timeout=10)
     except FileNotFoundError:
-        warn("Graphviz (dot) not found — graph rendering will produce DOT files only.")
+        warn("Graphviz (dot) not found — DOT export will produce files only, no PNG/SVG rendering.")
     except Exception:
         pass
 
@@ -96,135 +130,147 @@ def quick_check() -> bool:
     return True
 
 
-# ── Build ───────────────────────────────────────────────────────────
+# ── npm install ─────────────────────────────────────────────────────
 
-def find_or_build_binary(release: bool = True) -> Path | None:
-    """Return the path to the devstack binary, building first if necessary."""
-    target_bin = RELEASE_BIN if release else DEBUG_BIN
-    profile = "release" if release else "dev"
+def ensure_npm_deps() -> bool:
+    """Install npm dependencies if node_modules is missing."""
+    if NODE_MODULES.is_dir():
+        ok("npm dependencies already installed")
+        return True
 
-    if target_bin.is_file():
-        # Check if sources are newer than binary (simple mtime check)
-        src_dir = PROJECT_ROOT / "src"
-        newest_src = max(
-            (f.stat().st_mtime for f in src_dir.rglob("*") if f.is_file()),
-            default=0,
-        )
-        if target_bin.stat().st_mtime >= newest_src:
-            ok(f"Binary up-to-date: {target_bin}")
-            return target_bin
-        else:
-            info("Source files changed — rebuilding...")
-
-    info(f"Building devstack ({profile} profile)...")
-    build_cmd = ["cargo", "build"]
-    if release:
-        build_cmd.append("--release")
-
-    result = subprocess.run(build_cmd, cwd=str(PROJECT_ROOT))
-    if result.returncode != 0:
-        fail("Build failed. Fix compilation errors and try again.")
-        info("Tip: run 'python scripts/check_env.py' to verify your environment.")
-        return None
-
-    if target_bin.is_file():
-        ok(f"Build successful: {target_bin}")
-        return target_bin
+    info("node_modules/ not found — installing npm dependencies...")
+    result = subprocess.run(
+        ["npm", "install"],
+        cwd=str(PROJECT_ROOT),
+    )
+    if result.returncode == 0:
+        ok("npm dependencies installed successfully.")
+        return True
     else:
-        fail(f"Binary not found after build: {target_bin}")
-        return None
+        fail("npm install failed. Fix errors above and try again.")
+        return False
 
 
-# ── Run ─────────────────────────────────────────────────────────────
+# ── Launch modes ────────────────────────────────────────────────────
 
-def run_devstack(binary: Path, args: list[str]) -> int:
-    """Execute the devstack binary with the given arguments."""
-    cmd = [str(binary)] + args
-    info(f"Running: {' '.join(cmd)}\n")
+def launch_dev() -> int:
+    """Launch the Tauri app in development mode with hot reload."""
+    info("Starting DevStack Visualizer in development mode...")
+    info("This will start the Vite dev server and the Tauri window.\n")
     print(f"{BOLD}{'─' * 60}{RESET}")
-    result = subprocess.run(cmd)
+    result = subprocess.run(
+        ["npx", "tauri", "dev"],
+        cwd=str(PROJECT_ROOT),
+    )
     print(f"{BOLD}{'─' * 60}{RESET}")
     return result.returncode
 
+
+def build_production() -> int:
+    """Build the Tauri app for production (creates installer/bundle)."""
+    info("Building DevStack Visualizer for production...")
+    info("This will compile the Rust backend and bundle the app.\n")
+    print(f"{BOLD}{'─' * 60}{RESET}")
+    result = subprocess.run(
+        ["npx", "tauri", "build"],
+        cwd=str(PROJECT_ROOT),
+    )
+    print(f"{BOLD}{'─' * 60}{RESET}")
+
+    if result.returncode == 0:
+        print()
+        ok("Production build complete!")
+        bundle_dir = PROJECT_ROOT / "src-tauri" / "target" / "release" / "bundle"
+        if bundle_dir.is_dir():
+            info(f"Find the installer/executable in: {bundle_dir}")
+            # List bundle subdirectories
+            for child in sorted(bundle_dir.iterdir()):
+                if child.is_dir():
+                    info(f"  → {child.name}/")
+    return result.returncode
+
+
+# ── Usage ───────────────────────────────────────────────────────────
 
 def print_usage() -> None:
     """Show quick usage help."""
     print(f"""
 {BOLD}{CYAN}DevStack Visualizer — Launcher{RESET}
+{CYAN}Tauri v2 Desktop GUI Application{RESET}
 
 {BOLD}Usage:{RESET}
-    python scripts/run.py <project-path> [options]
+    python scripts/run.py [command]
+
+{BOLD}Commands:{RESET}
+    dev       Launch in development mode with hot reload (default)
+    build     Build production installer/bundle
 
 {BOLD}Examples:{RESET}
-    python scripts/run.py .                              Analyse current project
-    python scripts/run.py ../my-app --output svg         SVG output
-    python scripts/run.py . --graph --verbose            Verbose graph mode
-    python scripts/run.py . --complexity --detect-layers Full analysis
-    python scripts/run.py . --json                       JSON output
-    python scripts/run.py . --summary                    Quick summary
+    python scripts/run.py              Start dev server + Tauri window
+    python scripts/run.py dev          Same as above
+    python scripts/run.py build        Build production app
 
-{BOLD}Options are passed directly to devstack.{RESET}
-Run 'python scripts/run.py . --help' to see all devstack options.
+{BOLD}Other scripts:{RESET}
+    python scripts/check_env.py        Check prerequisites & setup environment
 
-{BOLD}Scripts:{RESET}
-    python scripts/check_env.py    Check prerequisites & setup environment
-    python scripts/run.py          Build & launch devstack (this script)
+{BOLD}Direct npm/Tauri commands:{RESET}
+    npm install                        Install frontend dependencies
+    npx tauri dev                      Start development mode
+    npx tauri build                    Build production app
 """)
 
 
 # ── Main ────────────────────────────────────────────────────────────
 
 def main() -> int:
-    print(f"\n{BOLD}{CYAN}DevStack Visualizer — Launcher{RESET}\n")
+    print(f"\n{BOLD}{CYAN}DevStack Visualizer — Launcher{RESET}")
+    print(f"{CYAN}Tauri v2 Desktop GUI Application{RESET}\n")
 
     # Validate project root
-    if not CARGO_TOML.is_file():
-        fail(f"Cargo.toml not found at {PROJECT_ROOT}")
+    if not PACKAGE_JSON.is_file():
+        fail(f"package.json not found at {PROJECT_ROOT}")
         info("Run this script from the devstack_visualizer project directory.")
         return 1
 
-    # Show usage if no arguments
-    if len(sys.argv) < 2:
-        print_usage()
-        # Default: analyse the current project directory with sensible defaults
-        if not _prompt_yn("Run devstack on the current project directory?"):
+    if not TAURI_CONF.is_file():
+        fail(f"src-tauri/tauri.conf.json not found at {PROJECT_ROOT}")
+        info("Run this script from the devstack_visualizer project directory.")
+        return 1
+
+    # Parse command
+    command = "dev"  # default
+    if len(sys.argv) >= 2:
+        arg = sys.argv[1].lower().strip("-")
+        if arg in ("h", "help"):
+            print_usage()
             return 0
-        user_args = ["analyze", str(PROJECT_ROOT), "--graph", "--verbose"]
-    elif sys.argv[1] in ("-h", "--help"):
+        elif arg in ("dev", "start", "run"):
+            command = "dev"
+        elif arg in ("build", "release", "prod", "production"):
+            command = "build"
+        else:
+            fail(f"Unknown command: {sys.argv[1]}")
+            print_usage()
+            return 1
+
+    # Quick prerequisite check
+    if not check_prerequisites():
+        return 1
+
+    # Ensure npm dependencies are installed
+    if not ensure_npm_deps():
+        return 1
+
+    print()
+
+    # Execute the chosen command
+    if command == "dev":
+        return launch_dev()
+    elif command == "build":
+        return build_production()
+    else:
         print_usage()
         return 0
-    else:
-        # Build the argument list
-        # If the first arg is a path (doesn't start with -), prepend "analyze"
-        user_args = list(sys.argv[1:])
-        if user_args and not user_args[0].startswith("-"):
-            # Assume it's a path → insert "analyze" subcommand
-            user_args = ["analyze"] + user_args
-        elif user_args and user_args[0] == "analyze":
-            pass  # user already typed "analyze"
-        else:
-            # All flags — assume they want to analyse current dir
-            user_args = ["analyze", "."] + user_args
-
-    # Quick sanity check
-    if not quick_check():
-        return 1
-
-    # Build (if needed)
-    binary = find_or_build_binary(release=True)
-    if binary is None:
-        return 1
-
-    # Launch
-    return run_devstack(binary, user_args)
-
-
-def _prompt_yn(question: str, default: bool = True) -> bool:
-    suffix = " [Y/n]: " if default else " [y/N]: "
-    answer = input(f"  {YELLOW}?{RESET}  {question}{suffix}").strip().lower()
-    if answer == "":
-        return default
-    return answer in ("y", "yes")
 
 
 if __name__ == "__main__":
