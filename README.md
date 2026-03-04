@@ -41,9 +41,31 @@ npx tauri build
 
 The installer/executable will be in `src-tauri/target/release/`.
 
+## Helper Scripts
+
+Python utility scripts are included in `scripts/` to simplify environment setup and launching:
+
+### Environment Check & Setup
+
+```bash
+python scripts/check_env.py
+```
+
+Validates all prerequisites (Python, Node.js, Rust, C compiler, Graphviz), checks project files (`src-tauri/Cargo.toml`, `package.json`, `tauri.conf.json`), installs npm dependencies if missing, and optionally builds the production app.
+
+### Quick Launcher
+
+```bash
+python scripts/run.py          # Start in development mode (default)
+python scripts/run.py dev      # Same as above
+python scripts/run.py build    # Build production installer/bundle
+```
+
+Performs prerequisite checks, auto-installs npm dependencies if needed, and launches the Tauri app in development or production mode.
+
 ## Usage
 
-1. Launch the app
+1. Launch the app (`npx tauri dev` or `python scripts/run.py`)
 2. Click **Open Project** to select a project folder
 3. The dependency graph renders automatically — zoom, pan, and click nodes
 4. Click a node to view file details in the sidebar

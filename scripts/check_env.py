@@ -2,14 +2,16 @@
 """
 DevStack Visualizer — Environment Checker & Setup Script
 =========================================================
-Checks all prerequisites, validates the environment, and optionally
-installs missing components or provides download links.
+Checks all prerequisites for the Tauri v2 Desktop GUI application,
+validates the environment, and optionally installs missing components
+or provides download links.
 
 Prerequisites checked:
   1. Python 3.8+       (running this script)
-  2. Rust / Cargo      (building the project)
-  3. A C compiler      (required by tree-sitter build)
-  4. Graphviz (dot)    (rendering architecture diagrams)
+  2. Node.js / npm     (frontend build & Tauri CLI)
+  3. Rust / Cargo      (Tauri backend / Rust core)
+  4. A C compiler      (required by tree-sitter build)
+  5. Graphviz (dot)    (exporting architecture diagrams)
 
 Run:
     python scripts/check_env.py
@@ -36,10 +38,12 @@ RESET = "\033[0m"
 # ── Minimum versions ───────────────────────────────────────────────
 MIN_PYTHON = (3, 8)
 MIN_RUST = (1, 60)  # Rust 2021 edition requirement
+MIN_NODE = (18, 0)  # Node.js 18+ required for Tauri v2
 
 # ── Download links ──────────────────────────────────────────────────
 LINKS = {
     "rust":     "https://www.rust-lang.org/tools/install",
+    "node":     "https://nodejs.org/en/download/",
     "graphviz": "https://graphviz.org/download/",
     "msvc":     "https://visualstudio.microsoft.com/visual-cpp-build-tools/",
     "gcc":      "https://gcc.gnu.org/install/",
@@ -154,6 +158,46 @@ def check_rust() -> bool:
     return passed
 
 
+def check_node() -> bool:
+    """Check that Node.js and npm are installed (required for frontend & Tauri CLI)."""
+    passed = True
+
+    # Node.js
+    node_out = run_cmd(["node", "--version"])
+    if node_out:
+        ver = parse_version(node_out)
+        if ver and ver[:2] >= MIN_NODE:
+            ok(f"Node.js {node_out}  (>= {'.'.join(map(str, MIN_NODE))} required)")
+        elif ver:
+            warn(f"Node.js {node_out} — upgrade recommended (>= {'.'.join(map(str, MIN_NODE))})")
+        else:
+            ok(f"Node.js found: {node_out}")
+    else:
+        fail("Node.js not found")
+        passed = False
+
+    # npm
+    npm_out = run_cmd(["npm", "--version"])
+    if npm_out:
+        ok(f"npm {npm_out}")
+    else:
+        fail("npm not found")
+        passed = False
+
+    if not passed:
+        info(f"Install Node.js (includes npm): {LINKS['node']}")
+        system = platform.system()
+        if system == "Windows":
+            info("  Or: winget install OpenJS.NodeJS.LTS")
+        elif system == "Darwin":
+            info("  Or: brew install node")
+        else:
+            info("  Or: sudo apt install nodejs npm  (Ubuntu/Debian)")
+            info("      sudo dnf install nodejs npm  (Fedora)")
+
+    return passed
+
+
 def check_c_compiler() -> bool:
     """Check for a C compiler (needed to build tree-sitter native code)."""
     system = platform.system()
@@ -250,106 +294,109 @@ def check_graphviz() -> bool:
         return False
 
 
-# ── Cargo project check ────────────────────────────────────────────
+# ── Cargo & frontend project checks ────────────────────────────────
 
 def check_cargo_project() -> bool:
-    """Verify the Cargo.toml exists at the workspace root."""
+    """Verify the src-tauri/Cargo.toml and package.json exist at the workspace root."""
     project_root = Path(__file__).resolve().parent.parent
-    cargo_toml = project_root / "Cargo.toml"
-    if cargo_toml.is_file():
-        ok(f"Cargo.toml found at {project_root}")
+    passed = True
+
+    # Tauri Cargo.toml
+    tauri_cargo = project_root / "src-tauri" / "Cargo.toml"
+    if tauri_cargo.is_file():
+        ok(f"src-tauri/Cargo.toml found")
+    else:
+        fail(f"src-tauri/Cargo.toml not found at {project_root}")
+        passed = False
+
+    # Frontend package.json
+    pkg_json = project_root / "package.json"
+    if pkg_json.is_file():
+        ok(f"package.json found")
+    else:
+        fail(f"package.json not found at {project_root}")
+        passed = False
+
+    # tauri.conf.json
+    tauri_conf = project_root / "src-tauri" / "tauri.conf.json"
+    if tauri_conf.is_file():
+        ok(f"src-tauri/tauri.conf.json found")
+    else:
+        warn(f"src-tauri/tauri.conf.json not found — Tauri app may not be configured")
+
+    if not passed:
+        info("Make sure you are running this script from the devstack_visualizer project root.")
+
+    return passed
+
+
+def check_node_modules() -> bool:
+    """Check if npm dependencies are installed."""
+    project_root = Path(__file__).resolve().parent.parent
+    node_modules = project_root / "node_modules"
+    if node_modules.is_dir():
+        ok("node_modules/ directory found (npm dependencies installed)")
         return True
     else:
-        fail(f"Cargo.toml not found at {project_root}")
-        info("Make sure you are running this script from the devstack_visualizer project.")
+        warn("node_modules/ not found — run 'npm install' to install frontend dependencies")
         return False
 
 
-# ── Build binary ───────────────────────────────────────────────────
+def check_tauri_cli() -> bool:
+    """Check if @tauri-apps/cli is available."""
+    project_root = Path(__file__).resolve().parent.parent
+    result = run_cmd(["npx", "tauri", "--version"])
+    if result:
+        ok(f"Tauri CLI: {result}")
+        return True
+    else:
+        warn("Tauri CLI not found — install with 'npm install' (included in devDependencies)")
+        return False
 
-def build_release(project_root: Path) -> Optional[Path]:
-    """Build the devstack binary in release mode and return its path."""
-    info("Building devstack in release mode (this may take a minute)...")
+
+# ── Install dependencies ────────────────────────────────────────────
+
+def install_npm_deps(project_root: Path) -> bool:
+    """Install npm dependencies (frontend + Tauri CLI)."""
+    info("Installing npm dependencies...")
     result = subprocess.run(
-        ["cargo", "build", "--release"],
+        ["npm", "install"],
         cwd=str(project_root),
     )
-    if result.returncode != 0:
-        fail("Cargo build failed.")
-        return None
-
-    system = platform.system()
-    exe_name = "devstack.exe" if system == "Windows" else "devstack"
-    binary = project_root / "target" / "release" / exe_name
-    if binary.is_file():
-        ok(f"Binary built: {binary}")
-        return binary
+    if result.returncode == 0:
+        ok("npm dependencies installed successfully.")
+        return True
     else:
-        fail(f"Expected binary not found at: {binary}")
-        return None
+        fail("npm install failed.")
+        return False
 
 
-# ── PATH setup ─────────────────────────────────────────────────────
+# ── Build Tauri app ─────────────────────────────────────────────────
 
-def setup_path(binary_dir: Path) -> None:
-    """Add the binary directory to the user's PATH (if not already present)."""
-    binary_dir_str = str(binary_dir)
-    current_path = os.environ.get("PATH", "")
-
-    if binary_dir_str.lower() in current_path.lower():
-        ok(f"PATH already contains {binary_dir_str}")
-        return
-
-    system = platform.system()
-
-    if system == "Windows":
-        if prompt_yn(f"Add '{binary_dir_str}' to your user PATH?"):
-            try:
-                # Use PowerShell to modify the user-level PATH persistently
-                ps_cmd = (
-                    f'$old = [Environment]::GetEnvironmentVariable("PATH", "User");'
-                    f'if ($old -notlike "*{binary_dir_str}*") {{'
-                    f'  [Environment]::SetEnvironmentVariable("PATH", "$old;{binary_dir_str}", "User");'
-                    f'  Write-Host "Done"'
-                    f'}}'
-                )
-                ret = subprocess.run(
-                    ["powershell", "-NoProfile", "-Command", ps_cmd],
-                    capture_output=True,
-                    text=True,
-                    timeout=30,
-                )
-                if ret.returncode == 0:
-                    ok(f"Added to user PATH. Restart your terminal for changes to take effect.")
-                else:
-                    warn("Could not modify PATH automatically.")
-                    info(f"Manually add to PATH: {binary_dir_str}")
-            except Exception as e:
-                warn(f"PATH setup error: {e}")
-                info(f"Manually add to PATH: {binary_dir_str}")
+def build_tauri_app(project_root: Path) -> bool:
+    """Build the Tauri desktop application."""
+    info("Building DevStack Visualizer (Tauri app) — this may take a few minutes...")
+    result = subprocess.run(
+        ["npx", "tauri", "build"],
+        cwd=str(project_root),
+    )
+    if result.returncode == 0:
+        ok("Tauri app built successfully!")
+        # Show the output location
+        system = platform.system()
+        if system == "Windows":
+            bundle_dir = project_root / "src-tauri" / "target" / "release" / "bundle"
+            info(f"Look for the installer/executable in: {bundle_dir}")
+        elif system == "Darwin":
+            bundle_dir = project_root / "src-tauri" / "target" / "release" / "bundle" / "dmg"
+            info(f"Look for the .dmg in: {bundle_dir}")
         else:
-            info(f"Skipped. To add manually, add this to your PATH: {binary_dir_str}")
-
-    elif system == "Darwin" or system == "Linux":
-        shell = os.environ.get("SHELL", "/bin/bash")
-        if "zsh" in shell:
-            rc_file = Path.home() / ".zshrc"
-        elif "fish" in shell:
-            rc_file = Path.home() / ".config" / "fish" / "config.fish"
-        else:
-            rc_file = Path.home() / ".bashrc"
-
-        export_line = f'\nexport PATH="{binary_dir_str}:$PATH"\n'
-        if rc_file.exists() and binary_dir_str in rc_file.read_text():
-            ok(f"PATH already configured in {rc_file}")
-            return
-
-        if prompt_yn(f"Add '{binary_dir_str}' to {rc_file}?"):
-            with open(rc_file, "a") as f:
-                f.write(export_line)
-            ok(f"Added to {rc_file}. Run 'source {rc_file}' or restart your terminal.")
-        else:
-            info(f"Skipped. Add manually: export PATH=\"{binary_dir_str}:$PATH\"")
+            bundle_dir = project_root / "src-tauri" / "target" / "release" / "bundle"
+            info(f"Look for the package in: {bundle_dir}")
+        return True
+    else:
+        fail("Tauri build failed. Check the errors above.")
+        return False
 
 
 # ── Summary ─────────────────────────────────────────────────────────
@@ -377,6 +424,7 @@ def main() -> int:
     header("DevStack Visualizer — Environment Check & Setup")
     info(f"System: {platform.system()} {platform.machine()}")
     info(f"Python: {sys.version}")
+    info(f"App type: Tauri v2 Desktop GUI (React + TypeScript frontend, Rust backend)")
     print()
 
     results: dict[str, bool] = {}
@@ -384,37 +432,52 @@ def main() -> int:
     # 1. Python version
     results["Python >= 3.8"] = check_python()
 
-    # 2. Rust & Cargo
+    # 2. Node.js & npm
+    results["Node.js & npm"] = check_node()
+
+    # 3. Rust & Cargo
     results["Rust & Cargo"] = check_rust()
 
-    # 3. C compiler
+    # 4. C compiler
     results["C Compiler"] = check_c_compiler()
 
-    # 4. Graphviz
+    # 5. Graphviz (optional, used for DOT export only)
     results["Graphviz (dot)"] = check_graphviz()
 
-    # 5. Cargo project
-    results["Cargo.toml present"] = check_cargo_project()
+    # 6. Project files
+    results["Project files present"] = check_cargo_project()
 
     all_ok = print_summary(results)
 
     if not all_ok:
         return 1
 
-    # ── Offer to build & install ─────────────────────────────────
+    # ── Check npm dependencies & Tauri CLI ───────────────────────
     project_root = Path(__file__).resolve().parent.parent
-    header("Build & Install")
+    header("Frontend Dependencies & Tauri CLI")
 
-    if prompt_yn("Build the devstack binary in release mode?"):
-        binary = build_release(project_root)
-        if binary:
-            setup_path(binary.parent)
-            print()
-            info("You can now run:  devstack analyze <path>")
+    has_modules = check_node_modules()
+    if not has_modules:
+        if prompt_yn("Install npm dependencies now?"):
+            if not install_npm_deps(project_root):
+                return 1
         else:
+            info("Skipped. Run 'npm install' manually before launching the app.")
+
+    check_tauri_cli()
+
+    # ── Offer to build the Tauri app ─────────────────────────────
+    header("Build & Launch")
+    info("Development mode:  npx tauri dev")
+    info("Production build:  npx tauri build")
+    print()
+
+    if prompt_yn("Build the Tauri desktop app in production mode?", default=False):
+        if not build_tauri_app(project_root):
             return 1
     else:
-        info("Skipped build. Run 'cargo build --release' manually when ready.")
+        info("Skipped production build.")
+        info("To start development mode, run:  npx tauri dev")
 
     print()
     return 0
