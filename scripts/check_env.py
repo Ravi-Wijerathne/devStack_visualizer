@@ -84,6 +84,7 @@ def run_cmd(args: list[str], timeout: int = 15) -> Optional[str]:
             capture_output=True,
             text=True,
             timeout=timeout,
+            shell=(platform.system() == "Windows"),
         )
         return result.stdout.strip() if result.returncode == 0 else None
     except Exception:

@@ -87,6 +87,7 @@ def check_prerequisites() -> bool:
             capture_output=True,
             text=True,
             timeout=10,
+            shell=IS_WINDOWS,
         )
         if result.returncode == 0:
             ok(f"npm {result.stdout.strip()}")
@@ -116,7 +117,7 @@ def check_prerequisites() -> bool:
 
     # Graphviz (optional — warn only)
     try:
-        subprocess.run(["dot", "-V"], capture_output=True, timeout=10)
+        subprocess.run(["dot", "-V"], capture_output=True, timeout=10, shell=IS_WINDOWS)
     except FileNotFoundError:
         warn("Graphviz (dot) not found — DOT export will produce files only, no PNG/SVG rendering.")
     except Exception:
@@ -142,6 +143,7 @@ def ensure_npm_deps() -> bool:
     result = subprocess.run(
         ["npm", "install"],
         cwd=str(PROJECT_ROOT),
+        shell=IS_WINDOWS,
     )
     if result.returncode == 0:
         ok("npm dependencies installed successfully.")
@@ -161,6 +163,7 @@ def launch_dev() -> int:
     result = subprocess.run(
         ["npx", "tauri", "dev"],
         cwd=str(PROJECT_ROOT),
+        shell=IS_WINDOWS,
     )
     print(f"{BOLD}{'─' * 60}{RESET}")
     return result.returncode
@@ -174,6 +177,7 @@ def build_production() -> int:
     result = subprocess.run(
         ["npx", "tauri", "build"],
         cwd=str(PROJECT_ROOT),
+        shell=IS_WINDOWS,
     )
     print(f"{BOLD}{'─' * 60}{RESET}")
 
