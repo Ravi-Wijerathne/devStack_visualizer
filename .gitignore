@@ -4,6 +4,8 @@
 /target/
 **/*.rs.bk
 *.pdb
+rust-analyzer/
+*.rlib
 
 # ========================
 # Generated Output Files
@@ -78,7 +80,6 @@ tags
 # ========================
 # Logs
 # ========================
-*.log
 logs/
 
 # ========================
@@ -97,6 +98,12 @@ tests/output/
 tarpaulin-report.html
 cobertura.xml
 
+# Vitest
+coverage/
+*.vitest-cache/
+.vitest/
+vitest.config.ts.timestamp-*
+
 # ========================
 # Miscellaneous
 # ========================
@@ -104,17 +111,23 @@ cobertura.xml
 *.tmp
 *.orig
 .cache/
+*.log
 
 # ========================
 # Frontend Build Output
 # ========================
 /dist/
 /node_modules/
+.next/
+out/
+build/
 
 # ========================
 # Tauri
 # ========================
 /src-tauri/target/
+src-tauri/gen/schemas/
+src-tauri/bundle/
 
 # Added by cargo
 
