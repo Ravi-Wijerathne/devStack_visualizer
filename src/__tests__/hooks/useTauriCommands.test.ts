@@ -16,7 +16,7 @@ describe('useTauriCommands', () => {
   describe('analyzeProject', () => {
     it('returns AnalysisResult on success', async () => {
       const mockResult: AnalysisResult = {
-        stack: { backend: 'rust', frontend: null, database: null, containerized: false },
+        stack: { backend: 'rust', frontend: null, database: null, containerized: false, secondary_languages: [] },
         files_parsed: 10,
         total_nodes: 5,
         total_edges: 8,
@@ -79,7 +79,7 @@ describe('useTauriCommands', () => {
       expect(result.current.error).toBe('Previous error');
 
       mockInvoke.mockResolvedValue({
-        stack: { backend: null, frontend: null, database: null, containerized: false },
+        stack: { backend: null, frontend: null, database: null, containerized: false, secondary_languages: [] },
         files_parsed: 0,
         total_nodes: 0,
         total_edges: 0,
