@@ -129,8 +129,10 @@ export default function GraphView({ graphData, onNodeClick }: GraphViewProps) {
         minZoom={0.1}
         maxZoom={4}
       >
-        <Controls
-          className="!bg-gray-800 !border-gray-600 !shadow-lg"
+        <Controls 
+          position="top-left"
+          showZoom={true}
+          showFitView={true}
           showInteractive={false}
         />
         <MiniMap

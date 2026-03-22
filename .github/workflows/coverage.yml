@@ -1,0 +1,63 @@
+name: Test Coverage
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  coverage:
+    name: Generate Coverage Reports
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Frontend coverage
+        run: npm run test:coverage
+        env:
+          CI: true
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v4
+        with:
+          files: ./coverage/lcov.info
+          flags: unittests
+          name: frontend-coverage
+        continue-on-error: true
+
+  rust-coverage:
+    name: Rust Coverage
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: cargo-tarpaulin
+
+      - name: Run tarpaulin
+        working-directory: src-tauri
+        run: cargo tarpaulin --outcomes --verbose
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v4
+        with:
+          file: ${{ github.workspace }}/src-tauri/tarpaulin-report.xml
+          flags: unittests
+          name: rust-coverage
+        continue-on-error: true

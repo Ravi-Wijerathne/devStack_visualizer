@@ -6,6 +6,17 @@ mod output;
 mod parser;
 mod scanner;
 
+#[cfg(test)]
+mod tests {
+    mod analyzer_test;
+    mod language_detector_test;
+    mod scanner_test;
+    mod parser {
+        mod js_parser_test;
+        mod python_parser_test;
+    }
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()

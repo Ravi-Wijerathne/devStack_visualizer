@@ -6,6 +6,14 @@
 
 ## Change Log
 
+### 2026-03-22 (Session 8)
+
+- **Fixed invisible Zoom In/Out icons in GraphView**
+  - **Root cause:** Control component's SVG icons were using dark colors that blended into the dark background, making them invisible.
+  - **Fix (CSS):** Added explicit styling to `src/styles/globals.css` for `.react-flow__controls`, `.react-flow__controls button`, and `.react-flow__controls button svg`. Set SVG fill/stroke to #e2e8f0 (light color) with proper button styling (background, border, hover effects).
+  - **Fix (Component):** Updated `src/components/GraphView.tsx` — removed problematic className from Controls, added explicit props: `position="top-left"`, `showZoom={true}`, `showFitView={true}` for better control visibility and positioning.
+  - **Affected files:** `src/styles/globals.css`, `src/components/GraphView.tsx`, `MEMORY.md`
+
 ### 2026-03-04 (Session 7)
 
 - **Updated Python scripts for Tauri GUI (CLI → GUI migration)**
