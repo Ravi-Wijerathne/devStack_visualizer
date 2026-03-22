@@ -71,12 +71,70 @@ Performs prerequisite checks, auto-installs npm dependencies if needed, and laun
 4. Click a node to view file details in the sidebar
 5. Use **Export** to save the graph as PNG, SVG, or PDF
 
+## Testing
+
+### Frontend Tests (Vitest + React Testing Library)
+
+```bash
+# Run all tests once
+npm run test:run
+
+# Run tests in watch mode
+npm run test
+
+# Run tests with coverage
+npm run test:coverage
+
+# Run tests with UI browser
+npm run test:ui
+```
+
+### Backend Tests (Rust)
+
+```bash
+cd src-tauri
+
+# Run all Rust tests
+cargo test
+
+# Run tests with output visible
+cargo test -- --nocapture
+
+# Run a specific test
+cargo test test_name
+
+# Run doc tests
+cargo test --doc
+```
+
+### Test Structure
+
+| Directory | Description |
+|-----------|-------------|
+| `src/__tests__/` | Frontend component and hook tests |
+| `src-tauri/src/tests/` | Rust unit tests |
+| `tests/sample_projects/` | Test fixtures for parser testing |
+
+### Available Frontend Tests
+
+- **Components**: GraphView, Sidebar, Toolbar, ProjectPicker, SettingsPanel, ExportDialog
+- **Hooks**: useTauriCommands
+- **Types**: Type validation tests
+
+### Available Rust Tests
+
+- **Parsers**: Python, JavaScript/TypeScript extraction logic
+- **Analyzer**: Graph building, cycle detection, import resolution
+- **Scanner**: File discovery, directory filtering
+- **Language Detector**: Tech stack detection
+
 ## Tech Stack
 
 | Layer    | Technology |
 |----------|------------|
 | Backend  | Rust, Tauri v2, Tree-Sitter, petgraph, rayon |
 | Frontend | React, TypeScript, React Flow, Tailwind CSS |
+| Testing  | Vitest, React Testing Library, Rust native tests |
 | Build    | Vite, Cargo |
 
 ## License
