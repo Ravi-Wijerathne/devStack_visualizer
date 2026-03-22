@@ -115,6 +115,18 @@ function ProjectOverview({ result }: { result: AnalysisResult }) {
               <span className="text-gray-500">Database:</span> {result.stack.database}
             </p>
           )}
+          {result.stack.secondary_languages.length > 0 && (
+            <p>
+              <span className="text-gray-500">Utilities:</span>{" "}
+              {result.stack.secondary_languages.map((lang, i) => (
+                <span key={i}>
+                  {lang.name}
+                  {lang.description && <span className="text-gray-600"> ({lang.description})</span>}
+                  {i < result.stack.secondary_languages.length - 1 && ", "}
+                </span>
+              ))}
+            </p>
+          )}
           <p>
             <span className="text-gray-500">Containerized:</span>{" "}
             {result.stack.containerized ? "Yes" : "No"}

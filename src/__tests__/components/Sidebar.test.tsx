@@ -15,7 +15,7 @@ const createMockFileAnalysis = (overrides: Partial<FileAnalysis> = {}): FileAnal
 });
 
 const createMockAnalysisResult = (overrides: Partial<AnalysisResult> = {}): AnalysisResult => ({
-  stack: { backend: 'rust', frontend: null, database: null, containerized: false },
+  stack: { backend: 'rust', frontend: null, database: null, containerized: false, secondary_languages: [] },
   files_parsed: 10,
   total_nodes: 5,
   total_edges: 8,
@@ -120,6 +120,7 @@ describe('Sidebar Snapshots', () => {
         frontend: 'React',
         database: 'PostgreSQL',
         containerized: true,
+        secondary_languages: [],
       }
     });
     render(<Sidebar analysisResult={result} selectedFile={null} onClose={mockOnClose} />);
@@ -186,7 +187,7 @@ describe('Sidebar Edge Cases', () => {
 
   it('handles empty project stack', () => {
     const result = createMockAnalysisResult({
-      stack: { backend: null, frontend: null, database: null, containerized: false }
+      stack: { backend: null, frontend: null, database: null, containerized: false, secondary_languages: [] }
     });
     render(<Sidebar analysisResult={result} selectedFile={null} onClose={mockOnClose} />);
     

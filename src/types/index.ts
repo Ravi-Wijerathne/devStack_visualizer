@@ -1,10 +1,16 @@
 // TypeScript types matching the Rust backend structs
 
+export interface SecondaryLanguage {
+  name: string;
+  description: string;
+}
+
 export interface ProjectStack {
   backend: string | null;
   frontend: string | null;
   database: string | null;
   containerized: boolean;
+  secondary_languages: SecondaryLanguage[];
 }
 
 export interface FileAnalysis {

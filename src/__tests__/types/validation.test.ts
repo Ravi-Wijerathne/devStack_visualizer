@@ -18,6 +18,7 @@ describe('Type Validation', () => {
         frontend: 'react',
         database: 'postgresql',
         containerized: true,
+        secondary_languages: [],
       };
       expect(stack.backend).toBe('rust');
       expect(stack.frontend).toBe('react');
@@ -31,6 +32,7 @@ describe('Type Validation', () => {
         frontend: null,
         database: null,
         containerized: false,
+        secondary_languages: [],
       };
       expect(stack.backend).toBeNull();
       expect(stack.frontend).toBeNull();
@@ -44,6 +46,7 @@ describe('Type Validation', () => {
         frontend: null,
         database: 'sqlite',
         containerized: false,
+        secondary_languages: [],
       };
       expect(stack.backend).toBe('python');
     });
@@ -199,7 +202,7 @@ describe('Type Validation', () => {
   describe('AnalysisResult', () => {
     it('accepts valid AnalysisResult', () => {
       const result: AnalysisResult = {
-        stack: { backend: 'rust', frontend: null, database: null, containerized: false },
+        stack: { backend: 'rust', frontend: null, database: null, containerized: false, secondary_languages: [] },
         files_parsed: 10,
         total_nodes: 5,
         total_edges: 8,
@@ -214,7 +217,7 @@ describe('Type Validation', () => {
 
     it('accepts AnalysisResult with circular dependencies', () => {
       const result: AnalysisResult = {
-        stack: { backend: 'rust', frontend: null, database: null, containerized: false },
+        stack: { backend: 'rust', frontend: null, database: null, containerized: false, secondary_languages: [] },
         files_parsed: 5,
         total_nodes: 3,
         total_edges: 4,
