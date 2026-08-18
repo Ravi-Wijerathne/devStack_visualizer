@@ -5,6 +5,7 @@ use serde::Serialize;
 
 /// Complete analysis result for JSON/IPC output
 #[derive(Debug, Clone, Serialize)]
+#[allow(dead_code)]
 pub struct AnalysisOutput {
     pub stack: ProjectStack,
     pub files_parsed: usize,
