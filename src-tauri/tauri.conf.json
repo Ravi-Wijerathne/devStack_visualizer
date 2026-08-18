@@ -24,5 +24,13 @@
       "csp": null
     }
   },
-  "plugins": {}
+  "plugins": {},
+  "bundle": {
+    "active": true,
+    "targets": "all",
+    "icon": [
+      "icons/icon.png",
+      "icons/icon.ico"
+    ]
+  }
 }
