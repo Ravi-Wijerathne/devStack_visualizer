@@ -6,7 +6,7 @@ license = "MIT"
 description = "Analyze project codebases and generate interactive architecture diagrams"
 
 [lib]
-name = "devstack_visualizer"
+name = "app_lib"
 crate-type = ["staticlib", "cdylib", "rlib"]
 
 [build-dependencies]

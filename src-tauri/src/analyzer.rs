@@ -10,6 +10,7 @@ use std::path::Path;
 #[derive(Debug)]
 pub struct DependencyGraph {
     pub graph: DiGraph<String, ()>,
+    #[allow(dead_code)]
     pub node_map: HashMap<String, NodeIndex>,
 }
 

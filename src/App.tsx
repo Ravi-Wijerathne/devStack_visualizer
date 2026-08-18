@@ -111,11 +111,11 @@ export default function App() {
         </div>
       )}
 
-      <main className="flex flex-1 overflow-hidden">
+      <main className="flex flex-1 overflow-hidden w-full">
         {!projectPath ? (
           <ProjectPicker onProjectSelected={handleProjectSelected} disabled={loading} />
         ) : (
-          <div className="flex flex-1 overflow-hidden">
+          <div className="flex flex-1 overflow-hidden w-full">
             <div className="flex-1">
               <GraphView
                 graphData={analysisResult?.graph_data ?? null}

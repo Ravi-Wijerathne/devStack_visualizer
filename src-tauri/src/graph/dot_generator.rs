@@ -39,6 +39,7 @@ pub fn generate_dot(dep_graph: &DependencyGraph) -> Result<String> {
 }
 
 /// Generate DOT with layer subgraphs (MVC / Clean Architecture detection)
+#[allow(dead_code)]
 pub fn generate_dot_with_layers(dep_graph: &DependencyGraph) -> Result<String> {
     let mut dot = String::new();
 
